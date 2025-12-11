@@ -1,0 +1,5 @@
+.env
+__pycache__/
+USAjobs - BACKUP CASO ESGOTE AS REQUISICOES.db
+*.db
+*.xlsx
