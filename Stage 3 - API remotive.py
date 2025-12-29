@@ -26,7 +26,7 @@ from sklearn.metrics import classification_report ## for the machine learning la
 
 nlp = spacy.load("en_core_web_sm",disable=["parser", "ner"])
 
-conn = sqlite3.connect('vagasremotive.db')
+conn = sqlite3.connect('USAjobs.db')
 cursor = conn.cursor()
 
 INVISIBLE_CHARS = [
@@ -123,7 +123,7 @@ d["word"].lower() in dict_jobid_word_to_remove_from_bloco_stage3[d["jobid"]])] #
 print ("the size of the negatives passed to the model was:", len(negatives_to_machine_learning_stg3))
 
 cursor.execute('''
-select word from palavrasdescricao
+select word from wordsindescription
 where stage_origin <> 'stage_3'
 ''')
 

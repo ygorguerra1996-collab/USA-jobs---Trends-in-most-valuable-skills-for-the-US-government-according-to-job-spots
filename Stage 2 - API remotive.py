@@ -16,7 +16,7 @@ import os
 
 # we're gonna need to connect to the db again since we divided the stages
 
-conn = sqlite3.connect('vagasremotive.db')
+conn = sqlite3.connect('USAjobs.db')
 cursor = conn.cursor()
 
 LOAD_DIR = "C:\\Users\\ygorg\\OneDrive\\Documentos\\Pickles for remotive project"
@@ -372,14 +372,14 @@ for ngrams in [bigrams_stage2,trigrams_stage2,fourgrams_stage2,fivegrams_stage2]
     if len(words_to_db) >= words_to_db_max:
 
         cursor.executemany ('''
-        INSERT OR IGNORE INTO palavrasdescricao(jobid, word, stage_origin)
+        INSERT OR IGNORE INTO wordsindescription(jobid, word, stage_origin)
         VALUES (?,?,?)''',words_to_db)
         conn.commit()
         words_to_db = []
 
 if words_to_db:
     cursor.executemany('''
-    INSERT OR IGNORE INTO palavrasdescricao(jobid, word, stage_origin)
+    INSERT OR IGNORE INTO wordsindescription(jobid, word, stage_origin)
     VALUES (?,?,?)''',words_to_db)
 
 end = time.time()

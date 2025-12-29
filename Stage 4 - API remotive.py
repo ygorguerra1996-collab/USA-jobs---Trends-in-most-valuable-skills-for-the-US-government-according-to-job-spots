@@ -28,6 +28,8 @@ import os
 #os 3 estagios estão muito bons, apesar de ter lixo ainda, mas tamos indo muito bem, até validei uma amostragem de 1k com o gpt
 # conseguimos separar o lixo de "somos uma empresa assim assim..." e ficar com o que importa. Até o lixo aqui é proximo das skills.
 
+start = time.time()
+print ("starting to unpack pickle")
 
 LOAD_DIR = "C:\\Users\\ygorg\\OneDrive\\Documentos\\Pickles for remotive project"
 path = os.path.join(LOAD_DIR, "stage3_data.pkl")
@@ -42,11 +44,20 @@ positives_stage3_shorter = stage3_data["positives_stage3_shorter"]
 vectorizer = stage3_data["vectorizer"]
 model = stage3_data["model"]     
 
+end = time.time()
+
+print (f"finished unpacking pickle, time needed: {end-start:.2f} seconds")
+
+
+start = time.time()
+print ("Starting to generate positive shorte grams excel check")
 
 df5 = pd.DataFrame(positives_stage3_shorter[:1000000])
 df5.to_excel("testing positive short grams.xlsx", index= False)
 
 print ("excel para teste do positive short grams gerado")
+end = time.time()
+print (f"time needed to finish generating the excel for checking short grams: {end - start:.2f} seconds")
 
 # testei o positive stage3_shorter e ele tem 1-3 grams. tudo certo
 

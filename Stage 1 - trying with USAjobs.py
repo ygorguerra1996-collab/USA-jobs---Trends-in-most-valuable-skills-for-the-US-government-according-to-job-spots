@@ -11,12 +11,58 @@ import math
 from spacy.lang.en.stop_words import STOP_WORDS #its gonna help in stage 2. to filter stopwords, not having to use doc.
 import pickle
 
-##load_dotenv()
-##API_KEY = os.getenv ("API_KEY")
-##USER_EMAIL = os.getenv("USER_EMAIL")
+load_dotenv()
+API_KEY = os.getenv ("API_KEY")
+USER_EMAIL = os.getenv("USER_EMAIL")
 ##
-##if not API_KEY:
-##    raise RuntimeError ("API KEY NOT FOUND")
+if not API_KEY:
+    raise RuntimeError ("API KEY NOT FOUND")
+
+#Just explaining how the request to the API was made, Since the idea was to only work with IT roles.
+
+url = "https://data.usajobs.gov/api/search"
+
+headers = {
+    
+    "Host": "data.usajobs.gov",
+    "User-Agent": USER_EMAIL,
+    "Authorization-Key": API_KEY }
+
+params = {
+    "ResultsPerPage": 500,
+    "Page": 1,
+    "Series": "2210;1550;1560;0854;1520;1530;0801;1515;0343;0301;0080;0401;1301" 
+} 
+
+
+# "2210;1550;1560;0854;1520;1530": these are the clean series. But they get 85% of IT spots. to get closer to 
+# 100% we will have to work with the other ones, that are ambiguous. These: 
+#0801 – General Engineering
+#1515 – Operations Research
+#0343 – Management and Program Analysis
+#0301 – Miscellaneous Administration
+#0080 – Security Administration
+#0401 – Natural Sciences
+#1301 – General Physical Science
+
+#just to know the good ones, since we will focus only in IT jobs:
+
+#"2210",  # IT Management
+#"1550",  # Computer Science
+#"1560",  # Data Science
+#"0854",  # Computer Engineering
+#"1520",  # Mathematics
+#"1530",  # Statistics
+#"1515",  # Operations Research
+
+
+response = requests.get()
+
+#I ran the code with the requests (branch) in a different file, since it ran only once. Our logic
+# was in this stage with the data that had been already stored in the db.
+
+# From now on, we're simple working with the IT only jobs that were sent to the db in order to save requests.
+# (USA jobs has a somewhat restrict requests limit)
 
 conn = sqlite3.connect('USAjobs.db')
 cursor = conn.cursor()
@@ -225,14 +271,69 @@ for n_grams in [bigrams,trigrams,fourgrams,fivegrams]: #created a list with all 
                     else:
                         dict_jobid_index_to_remove_from_bloco[jobid].update(indexes_to_remove) 
 
+            print(f" Stage1: n-gram found in esco-skillnet file:", clean_gram.strip())
+            print (f" Stage1: jobid,Word queued for commit in the db:", jobid,clean_gram)
+            if len (chunk) >= chunk_size: # if the chunk queue list reached 1000 or more itens, its time to commit to the db
+                cursor.executemany ('''INSERT OR IGNORE INTO wordsindescription (jobid,word,stage_origin)
+                VALUES (?,?,?)''', chunk)
+                conn.commit()
+                chunk = []
 
+if chunk: # if theres still stuff in chunk, send the leftovers to the db
+    cursor.executemany('''INSERT OR IGNORE INTO wordsindescription (jobid, word, stage_origin) VALUES (?, ?, ?)''', chunk)
+    conn.commit()
+    chunk = []
 
+bloco_de_descricao [:] = [d for d in bloco_de_descricao if not (d["jobid"] in dict_jobid_index_to_remove_from_bloco and d["index"] 
+in dict_jobid_index_to_remove_from_bloco[d["jobid"]])] #its working. Searches for the jobid from jobid from bloco_de_descricaoin the
+#dict_jobid_index_to_remove... keys and if it finds it, searches for the indexes in the jobid values (set). so its searching for both 
+#jobid and indexes. perfect for removing the index for each jobid, as described in the dict_jobid_index_to_remove... great.
 
+#vars I'll use in stage2:
+#bigrams, - list
+#trigrams, - list
+#fourgrams, - list
+#fivegrams, - list
+#ngrams to be cut, - dataframe
+#bloco_de_descricao - list of dicts
+#regarding the db, I'm gonna have to reopen in stage2, connect etc.
 
+#now, saving the vars I'll use in stage 2 of the ETL in the pickle file, referencing in the stage 2 and keep working:
 
+df_3 = pd.DataFrame(bloco_de_descricao[:500000])
+df_3.to_excel("blocodescricaoposcorrecaodebug.xlsx",index= False)
 
+print ("excel do bloco descricao para check gerado")
 
+import os
+import pickle
+
+SAVE_DIR = "C:\\Users\\ygorg\\OneDrive\\Documentos\\Pickles for remotive project"
+os.makedirs(SAVE_DIR, exist_ok=True)
+
+path = os.path.join(SAVE_DIR, "stage1_data.pkl")
+
+with open(path, "wb") as f: #creates a file with the name stage1_data.pkl...., wb is write binary. needed because pickle saves this way
+    pickle.dump ({ #"dump" picks the object and saves in this file we're creating in the open. In this case, the object is a dict that
+        #correlates the var names to their actual values
+        "bigrams": bigrams,
+        "trigrams": trigrams,
+        "fourgrams": fourgrams,
+        "fivegrams": fivegrams,
+        "ngrams_to_be_cut": ngrams_to_be_cut,
+        "bloco_de_descricao": bloco_de_descricao
+    },f) #f is the alias to the file
 print ("ok until here")
+
+print ("stage 1 finished")
+
+#maybe we still need some refactoration. Lets see if this runs tonight
+
+
+
+
+
+
 
 
 
