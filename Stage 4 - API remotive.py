@@ -59,6 +59,13 @@ print ("excel para teste do positive short grams gerado")
 end = time.time()
 print (f"time needed to finish generating the excel for checking short grams: {end - start:.2f} seconds")
 
+experience_qualifiers_to_cut = ["experience", "experience with", "experience in", "years of experience", "hands-on experience", "hands on experience", "practical experience", "professional experience", "relevant experience", "previous experience", "prior experience", "knowledge", "knowledge of", "working knowledge", "solid knowledge", "strong knowledge", "in-depth knowledge", "deep knowledge", "thorough knowledge", "general knowledge", "familiarity", "familiarity with", "basic familiarity", "strong familiarity", "proficiency", "proficiency in", "proficient in", "highly proficient", "advanced proficiency", "basic proficiency", "intermediate proficiency", "expert proficiency", "expertise", "expertise in", "deep expertise", "technical expertise", "subject matter expertise", "sme", "senior level experience", "lead level experience", "advanced experience", "ability", "ability to", "strong ability", "demonstrated ability", "proven ability", "capability", "capable of", "skill in", "skilled in", "hands-on", "hands on", "exposure to", "experience using", "experience working with", "worked with", "working with", "background in", "understanding of", "awareness of", "comfort with", "comfortable with", "years of", "minimum years", "x years", "minimum experience", "required experience", "preferred experience"
+]
+
+generic_non_tech_substantives_to_cut = ["activity", "activities", "mission", "missions", "task", "tasks", "responsibility", "responsibilities", "role", "roles", "function", "functions", "process", "processes", "procedure", "procedures", "operation", "operations", "workflow", "workflows", "work", "effort", "initiative", "initiatives", "objective", "objectives", "goal", "goals", "deliverable", "deliverables", "assignment", "assignments", "project", "projects", "program", "programs", "plan", "plans", "planning", "execution", "implementation", "support", "maintenance", "troubleshooting", "analysis", "evaluation", "assessment", "monitoring", "report", "reports", "documentation", "communication", "coordination", "collaboration", "interaction", "interface", "handling", "management", "administration", "operation support", "technical support", "user support", "customer support", "field support", "equipment", "hardware", "software", "systems", "system", "platform", "tools", "tool", "infrastructure", "environment", "resource", "resources", "materials", "components", "devices", "network", "networks", "data", "information", "content", "records", "files", "documents", "issues", "incidents", "problems", "requests", "tickets", "cases", "changes", "updates", "upgrades", "improvements", "enhancements", "solutions", "services", "service", "business", "organization", "company", "department", "team", "teams", "stakeholders", "clients", "customers", "users", "end users", "vendors", "partners", "requirements", "specifications", "standards", "policies", "guidelines", "procedural", "operational", "functional", "technical activities", "routine", "routines", "day-to-day", "daily activities", "general activities"]
+
+to_cut_prefixes = tuple(experience_qualifiers_to_cut + generic_non_tech_substantives_to_cut) # "startswith" doesnt accept lists, that why I'm converting them to tuples
+
 # testei o positive stage3_shorter e ele tem 1-3 grams. tudo certo
 
 #PROXIMOS PASSOS:
@@ -91,30 +98,56 @@ model_embeddings = SentenceTransformer('all-MiniLM-L6-v2') ## é o modelo 'all-M
 #ele que gera os embeddings de palavras. all-MiniLM é o modelo, "L6" significa que ele tem 6 camadas de atenção. E v2 é a versão dele.
 #'all' indica que foi treinado para gerar embeddings para sentenças e palavras em geral nao só tarefas especificas.
 
-all_grams = []
+##OBS: positives_stage3_shorter AQUI É O OBJETO QUE TEM O JOBID ATRELADO ATÉ ENTÃO
+
+positives_stage3_shorter_after_listtreatment = []
+
 
 for jobid,grams in positives_stage3_shorter:
+    string_grams = ' '.join(grams)
+    if string_grams.startswith (to_cut_prefixes): #ignoring the noise "experience with", "familiarity with" to get only tech skills 
+        continue
+    else:
+        positives_stage3_shorter_after_listtreatment.append((jobid,string_grams))
+
+batch_size = 500
+positives_stage3_shortes_after_verb_removal = []
+nlp = spacy.load("en_core_web_sm", disable=["ner", "parser"])
+
+
+for i in range (0,len(positives_stage3_shorter_after_listtreatment),batch_size):
+    batch = positives_stage3_shorter_after_listtreatment[i:i+batch_size]
+    strings = [grams for jobid, grams in batch]
+
+    for (jobid,grams),doc in zip(batch,nlp.pipe(strings, batch_size = batch_size)):
+        if len(doc)> 0 and doc [0].pos_ == "VERB":
+            continue
+
+        positives_stage3_shortes_after_verb_removal.append((jobid,grams))
+
+
+all_grams = []
+
+for jobid,grams in positives_stage3_shortes_after_verb_removal:
     all_grams.append(grams)
 
 ##all_grams é uma lista de listas, em que cada lista é uma gram
 
-grams_as_strings = [" ".join (g).strip() for g in all_grams if len(" ".join(g).strip())>0]
+## pelo visto, vou implementar os filtros de "se o gram começa com verbo, experience with" etc,
+# excluir, aqui . nesse objeto, all_grams
 
-unique_grams = sorted(set(grams_as_strings)) #retuns 557k unique grams
-#####temos um problema aqui. A minha lista de unique_grams tem 577k de registros. E segundo o GPT
-#####é muito pesado gerar os embeddings para tudo isso. O problema não é nem os clusters, e sim
-##### os embeddings.
-#### vou ter que dar um jeito de filtrar.
 
-#### ESTRATEGIA possivel, embedar 150k e treinar o kmeans com esses 150k e depois embedar o restante
-#### em batches e passar pelo k-means. Segundo o GPT isso vai ser leve.
+grams_as_strings = [g.strip() for g in all_grams if len(g.strip())>0] #just removing spaces
+# and converting lists into strings
+
+unique_grams = sorted(set(grams_as_strings)) #removing duplicates so clusterization is shorter
 
 sample_size = 150000
 
 first150k_unique_grams = unique_grams[:sample_size]
 first150k_embeddings = model_embeddings.encode(first150k_unique_grams,batch_size=512, convert_to_numpy=True)
 
-k =20
+k =8
 
 kmeans = KMeans(n_clusters=k,random_state=42,n_init='auto')
 kmeans.fit(first150k_embeddings)
@@ -149,96 +182,15 @@ df10.to_excel("clusterIDtocheck.xlsx",index=False)
 
 print ("cluster dict concluído")
 
-###onde estou agora: decidir se vamos pegar aquela parte de actividades que descreve o que a pessoa
-### vai fazer no dia a dia também, ou só pegar os requirements/ skills/ must have.
 
-### não daria muito trabalho provavelmente, talvez fosse só uma questão de no stage 1
-### cortar tudo que vem antes de "requirements", "skills", "what we're looking for"...
+##Ordem de resolução:
+##1- Separar skill normal, de tech skill. vamos focar nas tech skills - tecnologia, ferramenta, linguagem, framework ou plataforma.
+    #pra isso:
+    #excluir casos das listas fixas.
+    #excluir dos 1-3 grams as grams que começam com verbo.
+        #isso não da pau pq eu vou retirar a gram que é "experience with python" e ficar com a "python"
+        # remover 
 
-## o GPT me aconselhou a pegar só as skills e excluir as atividades. Pq se não o gráfico vai 
-## virar uma zona. To inclinado a isso também.
-
-## outro ponto é, escolher os clusters depois. talvez o melhor seja dar um passo atras e só trabalhar
-## com o texto que vem antes desses pontos. O que vai ajudar demais na hora incluso de escolher os 
-## clusters.
-
-## ---------------------------------------------------------------------------------------------------
-
-
-## A ESTRATÉGIA PARA NÃO DAR PAU NA HORA DE CORTAR DE positives_stage3_shorter (PARA MANTERMOS O JOB ID) vai ser, depois do clustering,
-##usar um dicionario, para a operação ser 0(1). Então depois do clustering vamos fazer algo assim: cluster_dict = {gram: cluster_id,....}
-#e bater esse dict com a positives_stage3_shorter
-
-
-##embeddings = model.encode(unique_grams) ##passando as 1-3 grams que sobraram na ML do estagio anterior para gerar os embeddings.
-#a função encode pega cada string e transforma em um vetor de numeros
-
-
-
-##k = 20
-
-## explicação sobre os clusters que o kmeans vai fazer.
-## clustering é olhar para as 768 ou 384 dimensoes que foram atribuidas como vetores a cada gram, e vai AGRUPAR POR SEMELHANÇA.
-## de acordo com o que essas dimensões mostram de cada palavra. como tem um MONTE, ele consegue olhar e entender o significado dessas palavras
-## de acordo com a proximidade entre essas dimensões.
-## O kmeans vai as grams e atribuir um cluster para cada gram. É como se tivesse uma multidão de pessoas, e ele falasse "idosos na fila 1"
-## "crianças na fila 2", "programadores fila 3"... etc. está agrupando por semelhança;
-
-
-##kmeans = KMeans(n_clusters=k,random_state=42, n_init='auto') 
-##
-##labels = kmeans.fit_predict(embeddings)
-##
-##cluster_dict = {gram: int(cluster_id) for gram, cluster_id in zip(unique_grams, labels)}
-##
-##print (cluster_dict)
-
-#### REALMENTE, HA ALGUMAS PALAVRAS QUE ESTÃO VINDO JÁ COLADAS (TALVEZ DO PROPRIO JSON OU DO TRATAMENTO DO BS4.)
-### E SÃO POUCAS, UMAS 5K DOS 1MM DO BLOCO DESCRICAO. ACONTECE QUE POR SUA RARIDADE O TFIDF DELA DA ALTO E ELA PASSA COMO POSITIVA PELO ML.
-### E O CLUSTER TAMBÉM COSTUMA ESCOLHER ESSAS PALAVRAS PARA EMCABEÇAR A FILA. POR ISSO ESTAMOS VENDO ELAS MUITO NOS CLUSTERS.
-### AGORA TEM QUE VER SE NÃO É VIAJEM DO GPT ISSO.
-
-
-##obs tem umas grams que vieram com palavras coladas, provavelmente na hora de separar os /z etc, não colocarmos espaço.
-## o gpt falou que mesmo assim ele identifica, mas precisamos averiguar isso.
-
-
-
-
-
-
-
-
-
-##2) Fazer clustering nos embeddings
-##
-##Juntar vetores parecidos.
-##Use HDBSCAN (melhor) ou K-means (mais simples).
-##
-##Isso vai formar grupos como:
-##
-##Cluster 1 → python / sql / tableau / power bi
-##
-##Cluster 2 → create / maintain / learning / assessment
-##
-##Cluster 3 → articular / captivate / rise
-##
-##3) Identificar quais clusters representam SKILLS
-##
-##Você olha apenas os top tokens de cada cluster.
-##Se for skill → você marca como “skill cluster”.
-##Se for verbo genérico → ignora.
-##
-##É rápido e totalmente manual, mas é só olhar 20 clusters, não 6 milhões de tokens.
-##
-##4) Gerar seu dicionário final de skills
-##
-##Pegue todos tokens nos clusters marcados como SKILLS.
-##Pronto: você criou seu dicionário final.
-##
-##5) Filtrar os positivos
-##
-##Agora é fácil:
-##Só manter tokens cujo cluster = “skill”.
-##
-##Isso reduz de milhões para só as skills reais.
+##2- Resolver o problema de experience with python, python, familiarity with python
+##3 - resolver o problema de 2,3 skills na mesma gram.
+##4 - Decidir o que fazer com casos ambiguos como "program" etc

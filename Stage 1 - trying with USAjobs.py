@@ -56,7 +56,7 @@ params = {
 #"1515",  # Operations Research
 
 
-response = requests.get()
+
 
 #I ran the code with the requests (branch) in a different file, since it ran only once. Our logic
 # was in this stage with the data that had been already stored in the db.
