@@ -59,10 +59,13 @@ print ("excel para teste do positive short grams gerado")
 end = time.time()
 print (f"time needed to finish generating the excel for checking short grams: {end - start:.2f} seconds")
 
-experience_qualifiers_to_cut = ["experience", "experience with", "experience in", "years of experience", "hands-on experience", "hands on experience", "practical experience", "professional experience", "relevant experience", "previous experience", "prior experience", "knowledge", "knowledge of", "working knowledge", "solid knowledge", "strong knowledge", "in-depth knowledge", "deep knowledge", "thorough knowledge", "general knowledge", "familiarity", "familiarity with", "basic familiarity", "strong familiarity", "proficiency", "proficiency in", "proficient in", "highly proficient", "advanced proficiency", "basic proficiency", "intermediate proficiency", "expert proficiency", "expertise", "expertise in", "deep expertise", "technical expertise", "subject matter expertise", "sme", "senior level experience", "lead level experience", "advanced experience", "ability", "ability to", "strong ability", "demonstrated ability", "proven ability", "capability", "capable of", "skill in", "skilled in", "hands-on", "hands on", "exposure to", "experience using", "experience working with", "worked with", "working with", "background in", "understanding of", "awareness of", "comfort with", "comfortable with", "years of", "minimum years", "x years", "minimum experience", "required experience", "preferred experience"
+experience_qualifiers_to_cut = ["experience", "experience with", "experience in", "years of experience", "hands-on experience", "hands on experience", "practical experience", "professional experience", "relevant experience", "previous experience", "prior experience", "knowledge", "knowledge of", "working knowledge", "solid knowledge", "strong knowledge", "in-depth knowledge", "deep knowledge", "thorough knowledge", "general knowledge", "familiarity", "familiarity with", "basic familiarity", "strong familiarity", "proficiency", "proficiency in", "proficient in", "highly proficient", "advanced proficiency", "basic proficiency", "intermediate proficiency", "expert proficiency", "expertise", "expertise in", "deep expertise", "technical expertise", "subject matter expertise", "sme", "senior level experience", "lead level experience", "advanced experience", "ability", "ability to", "strong ability", "demonstrated ability", "proven ability", "capability", "capable of", "skill in", "skilled in", "hands-on", "hands on", "exposure to", "experience using", "experience working with", "worked with", "working with", "background in", "understanding of", "awareness of", "comfort with", "comfortable with", "years of", "minimum years", "x years", "minimum experience", "required experience", "preferred experience"'position','requirement','level','security','gs','application','technical','technique','development','datum','education','policy','engineering','qualification','grade','skill','technology','computer','employee','military','series','equivalent','problem','complex', 'year'
+
 ]
 
-generic_non_tech_substantives_to_cut = ["activity", "activities", "mission", "missions", "task", "tasks", "responsibility", "responsibilities", "role", "roles", "function", "functions", "process", "processes", "procedure", "procedures", "operation", "operations", "workflow", "workflows", "work", "effort", "initiative", "initiatives", "objective", "objectives", "goal", "goals", "deliverable", "deliverables", "assignment", "assignments", "project", "projects", "program", "programs", "plan", "plans", "planning", "execution", "implementation", "support", "maintenance", "troubleshooting", "analysis", "evaluation", "assessment", "monitoring", "report", "reports", "documentation", "communication", "coordination", "collaboration", "interaction", "interface", "handling", "management", "administration", "operation support", "technical support", "user support", "customer support", "field support", "equipment", "hardware", "software", "systems", "system", "platform", "tools", "tool", "infrastructure", "environment", "resource", "resources", "materials", "components", "devices", "network", "networks", "data", "information", "content", "records", "files", "documents", "issues", "incidents", "problems", "requests", "tickets", "cases", "changes", "updates", "upgrades", "improvements", "enhancements", "solutions", "services", "service", "business", "organization", "company", "department", "team", "teams", "stakeholders", "clients", "customers", "users", "end users", "vendors", "partners", "requirements", "specifications", "standards", "policies", "guidelines", "procedural", "operational", "functional", "technical activities", "routine", "routines", "day-to-day", "daily activities", "general activities"]
+generic_non_tech_substantives_to_cut = ["activity", "activities", "mission", "missions", "task", "tasks", "responsibility", "responsibilities", "role", "roles", "function", "functions", "process", "processes", "procedure", "procedures", "operation", "operations", "workflow", "workflows", "work", "effort", "initiative", "initiatives", "objective", "objectives", "goal", "goals", "deliverable", "deliverables", "assignment", "assignments", "project", "projects", "program", "programs", "plan", "plans", "planning", "execution", "implementation", "support", "maintenance", "troubleshooting", "analysis", "evaluation", "assessment", "monitoring", "report", "reports", "documentation", "communication", "coordination", "collaboration", "interaction", "interface", "handling", "management", "administration", "operation support", "technical support", "user support", "customer support", "field support", "equipment", "hardware", "software", "systems", "system", "platform", "tools", "tool", "infrastructure", "environment", "resource", "resources", "materials", "components", "devices", "network", "networks", "data", "information", "content", "records", "files", "documents", "issues", "incidents", "problems", "requests", "tickets", "cases", "changes", "updates", "upgrades", "improvements", "enhancements", "solutions", "services", "service", "business", "organization", "company", "department", "team", "teams", "stakeholders", "clients", "customers", "users", "end users", "vendors", "partners", "requirements", "specifications", "standards", "policies", "guidelines", "procedural", "operational", "functional", "technical activities", "routine", "routines", "day-to-day", "daily activities", "general activities",'position','area','announcement','competency','method','solution','design','appropriate','concept','practice','principle','standard','research','base','training','duty','certification','employment','office','professional','current','resume','list','alternative','example','recommendation','eligible','appointment','federal','week','hour','leadership','study','degree','document','sufficient','addition','expert','non','dod','date','e','control','government','possess','applicant','general','minimum','responsible','advanced','category','complete','effective','enterprise','month','wide','defense','additional','order','mathematic','matter','air','acquisition','eligibility','major','physical','sector','material','applicable','job','quality','approach','membership','occupational','subject','necessary','army','civilian','graduate','action','public','condition','consideration','candidate','national','university','group','theory','vacancy','potential','relationship','accomplishment','background','institution','official','achievement','copy','instruction','technician','accordance','law','package','applicants','college','person','submit','troubleshoot','registration','relevant','decision','veteran','industry','low','maximum','title','description','career','accountability','enhancement','nebraska','oversight','permanent','act','oversee','successful','volunteer','commitment','large','budget','challenge','conscientious','occupation','american','broad','drug','impact','align','interpersonal','suitability','determination','competence','gpa','honor','improvement',
+
+]
 
 to_cut_prefixes = tuple(experience_qualifiers_to_cut + generic_non_tech_substantives_to_cut) # "startswith" doesnt accept lists, that why I'm converting them to tuples
 
@@ -126,6 +129,14 @@ for i in range (0,len(positives_stage3_shorter_after_listtreatment),batch_size):
         positives_stage3_shortes_after_verb_removal.append((jobid,grams))
 
 
+#add normalization here then change var name below
+# we're gonna attack first cases of "familiarity with python", "python experience", "python" etc.
+
+
+
+
+
+
 all_grams = []
 
 for jobid,grams in positives_stage3_shortes_after_verb_removal:
@@ -183,14 +194,33 @@ df10.to_excel("clusterIDtocheck.xlsx",index=False)
 print ("cluster dict concluído")
 
 
+#important!!:
+#I used the clusterdict in excel to check for words that were poluting the embeddings. Generating 
+#disordered clusters.
+# I got the most frequent intial words on the grams them checked if the top 20 were tech-related skills
+#if they weren't, I added to the lists "experience_qualifiers_to_cut" and " experience_qualifiers_to_cut"
+# in order to filter the noise.
+# 
+ 
+##boa, cluster 3 ta ficando com cara de techskill. Agora preciso decidir depois se vou pra tratar
+## os dados que tem skills misturadas tipo "html sql", "python java" etc.
+
+
+
+
 ##Ordem de resolução:
 ##1- Separar skill normal, de tech skill. vamos focar nas tech skills - tecnologia, ferramenta, linguagem, framework ou plataforma.
     #pra isso:
     #excluir casos das listas fixas.
     #excluir dos 1-3 grams as grams que começam com verbo.
         #isso não da pau pq eu vou retirar a gram que é "experience with python" e ficar com a "python"
-        # remover 
+    # remover grams que começam com paalvras que obviamente não são tech skills, como "experience with"
+    # position #hiring etc... - ok. Removi tudo que começava com isso sem medo de perder skill pq,
+    #pela logica dos grams, na outra ponta se tem experience with python, vai ter só "python". Já que eu
+    #gerei 1-3 grams no texto todo.
 
-##2- Resolver o problema de experience with python, python, familiarity with python
-##3 - resolver o problema de 2,3 skills na mesma gram.
+
+
+##2 - resolver o problema de 2,3 skills na mesma gram. Vamos partir pra isso antes de normalização
+##3- Resolver o problema de experience with python, python, familiarity with python
 ##4 - Decidir o que fazer com casos ambiguos como "program" etc
