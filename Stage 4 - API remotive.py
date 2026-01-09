@@ -129,10 +129,60 @@ for i in range (0,len(positives_stage3_shorter_after_listtreatment),batch_size):
         positives_stage3_shortes_after_verb_removal.append((jobid,grams))
 
 
-#add normalization here then change var name below
+#add Multi-skill decomposition here then change var name below
 # we're gonna attack first cases of "familiarity with python", "python experience", "python" etc.
 
+## pelo que estava estudando, vamos usar embeddings em cada palavra dos grams que forem 2-3.
+## caso o embedding deles seja similar, não separa, são correlacionados, tipo "machine learning"
 
+## caso a similaridade for baixa, separa. que um não tem a ver com o outro. o GPT deu a ideia
+## de usar um threshold de 0.75 para definir similaridade ou não. Amanhã vou retomar, mas vamos 
+## partir desse código:
+
+from sklearn.metrics.pairwise import cosine_similarity #imports the function that calculates cosine_simlarity
+#it calculates how similar two vectors are in direction, not magnitude. result -1 for oposites, and 1 for identical
+import numpy as np #numpy for numeric operations
+
+def should_split_compound(gram, model, threshold=0.75): #function that says if the gram should be splitted or not
+#gram is the string that I'll pass, model is the embeddings model (sentence-transformer)
+# threshold = similarity limit that, if below this number, will tell that the grams don't make a whole concept
+    tokens = gram.lower().split() #treats and converts the gram in list
+
+    if not (1 < len(tokens) <= 3): #guaranteeing unigrams wont be split
+        return False # this line, is like the continue for loops but for functions. 
+    # as we will have an outsider loop, when its false, its not going to do anything to the gram.
+    # return in this case, CLOSES the function. 
+
+    emb_full = model.encode([gram]) # model refers to the SentenceTransformer
+# we pass the entire gram as a single-element list because the model expects a list of texts
+# the output is ONE embedding vector representing the semantic meaning of the full gram
+    #emb_full represents the whole sentence meaning
+    emb_parts = model.encode(tokens)#Model here is going to make reference to the sentence_transformers.
+    # but now we are passing each word to the sentence transformers to have the 384D for each token.
+    # emb_parts represents each word isolated meaning [embedding word1, embedding word2]
+
+    #INSIGHT : we calculate both because we wanna se if the whole sentence meaning is similar to the
+    # average meaning of the words? If yes, its a bi-tri gram. If not, its 2 different skills
+
+    emb_mean = np.mean(emb_parts, axis=0, keepdims=True)
+    #here, we are calculating a mean of the embeding parts, and the "axis=0" plays a key role:
+    #IMPORTANT: the mean is made by calculating, for example in a bigram:
+        #(dim1token1 + dim1token2)/2 ... (dim2token1 + dim2token2)/2...
+        #he calculates the means between the dimensions and leaves on a list.machine   → [10, 20, 30] Ex hipotetico se fossem só 3 dim:
+                                                                            #learning  → [40, 50, 60
+                                                                            #mean     → [25, 35, 45]
+    #Axis=0 calculates the mean VERTICALLY. (between dimensions)...Which is adequate for our case. 
+    # As we want to calculate mean between all the dimensions of the vector
+    # if it was Axis=0 or if we didn't mention it in the parameters, it would calculate the mean
+    # from all dimensions of token1 and the mean from all dimensions from token2. So we would have
+    # only 2 numbers instead of 384. For our case, its important to have the 384 means.
+
+    ##VER O KEEPDIMS AMANHÃ. TO CANSADO
+
+
+    sim = cosine_similarity(emb_full, emb_mean)[0][0]
+
+    return sim < threshold
 
 
 
