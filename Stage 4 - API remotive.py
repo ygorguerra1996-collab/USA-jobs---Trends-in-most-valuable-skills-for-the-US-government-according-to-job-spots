@@ -141,30 +141,29 @@ for i in range (0,len(positives_stage3_shorter_after_listtreatment),batch_size):
 
 from sklearn.metrics.pairwise import cosine_similarity #imports the function that calculates cosine_simlarity
 #it calculates how similar two vectors are in direction, not magnitude. result -1 for oposites, and 1 for identical
-import numpy as np #numpy for numeric operations
+import numpy as np #numpy for numeric operations, very eficient
 
-def should_split_compound(gram, model, threshold=0.75): #function that says if the gram should be splitted or not
+def should_split_compound(gram, gram_embeddings, threshold=0.87): #function that says if the gram should be splitted or not
 #gram is the string that I'll pass, model is the embeddings model (sentence-transformer)
 # threshold = similarity limit that, if below this number, will tell that the grams don't make a whole concept
-    tokens = gram.lower().split() #treats and converts the gram in list
+    tokens = gram.split() #treats and converts the gram in list
 
     if not (1 < len(tokens) <= 3): #guaranteeing unigrams wont be split
-        return False # this line, is like the continue for loops but for functions. 
+        return False,None # this line, is like the continue for loops but for functions. 
     # as we will have an outsider loop, when its false, its not going to do anything to the gram.
     # return in this case, CLOSES the function. 
 
-    emb_full = model.encode([gram]) # model refers to the SentenceTransformer
-# we pass the entire gram as a single-element list because the model expects a list of texts
-# the output is ONE embedding vector representing the semantic meaning of the full gram
-    #emb_full represents the whole sentence meaning
-    emb_parts = model.encode(tokens)#Model here is going to make reference to the sentence_transformers.
-    # but now we are passing each word to the sentence transformers to have the 384D for each token.
-    # emb_parts represents each word isolated meaning [embedding word1, embedding word2]
+    emb_full = gram_embeddings[gram].reshape(1,-1) #as we already calculated the embeddings for all grams
+    #we're unpacking the embedding for the specific gram.
 
-    #INSIGHT : we calculate both because we wanna se if the whole sentence meaning is similar to the
-    # average meaning of the words? If yes, its a bi-tri gram. If not, its 2 different skills
+    try:
+        emb_parts = np.vstack([gram_embeddings[t] for t in tokens])
 
-    emb_mean = np.mean(emb_parts, axis=0, keepdims=True)
+    except KeyError:
+        # token não existe no embedding (raro, mas seguro)
+        return False,None
+    
+    emb_mean = emb_parts.mean(axis=0, keepdims=True)
     #here, we are calculating a mean of the embeding parts, and the "axis=0" plays a key role:
     #IMPORTANT: the mean is made by calculating, for example in a bigram:
         #(dim1token1 + dim1token2)/2 ... (dim2token1 + dim2token2)/2...
@@ -177,15 +176,57 @@ def should_split_compound(gram, model, threshold=0.75): #function that says if t
     # from all dimensions of token1 and the mean from all dimensions from token2. So we would have
     # only 2 numbers instead of 384. For our case, its important to have the 384 means.
 
-    ##VER O KEEPDIMS AMANHÃ. TO CANSADO
+    # o keepdims é uma forma de manter no molde para poder passar para o modelo cosine_similarity.
+    # até onde entendi, esse keepdims = true é uma forma do shape ficar (1,384) ao inves de (,384),
+    # esse "1" é o numero no shape que sinaliza quantos embeddings estão ali. então esse keepdims
+    # é a forma de forçar o array a manter uma dimensão extra que indica quantos embeddings existem ali.
+   
+    sim = cosine_similarity(emb_full, emb_mean)[0][0] # o Resultado desse cosine similarity vai sair algo como [[0.62]]. Então usamos [0] [0] para acessar o valor
+
+    #cosine similarity is an object from sklearn.metrics.pairwise that compares how similar are two 
+    # vectors on direction, not size. Result goes from -1 to 1. where 1= exactly the same, 0= no correlation
+    # -1= opposite. It expects 2D matrixes. (thats why I had to use keepdims=True).
+
+    #a formula para o cosine similarity é: 
+    #   Produto escalar = (dim1 de A * Dim1 de B + dim2 de A * Dim2 de B....até o fim das 368 dimensões do embedding)
+    # Norma A = Raiz quadrada de: (dim1A^2 + dim2A^2 + dim3A^2...)
+    # Norma B = mesma coisa do A só que aplicado pra B
+
+    #cosine similarity = produto escalar/norma A * norma B
+
+    # Resultado próximo de 1 indica vetores na mesma direção = significados muito semelhantes, e 
+    #com esse resultado vamos saber se precisa separar a gram ou não.
+
+    return sim < threshold, sim #returns TRUE for spliting/ FALSE for nothing
 
 
-    sim = cosine_similarity(emb_full, emb_mean)[0][0]
+unique_grams = list (set(grams for _,grams in positives_stage3_shortes_after_verb_removal))
+gram_embeddings = dict(zip(unique_grams,model_embeddings.encode(unique_grams,batch_size=512, convert_to_numpy=True)))
+## A way that I found to pass all the grams through the sentence transformers once, instead of putting
+## in a loop and decreasing performance
 
-    return sim < threshold
+grams_to_split = []
+
+for gram,vector in gram_embeddings.items():
+    should_split,sim = should_split_compound(gram,gram_embeddings,threshold=0.87)
+
+    if should_split == True:
+
+        grams_to_split.append((gram, sim))
 
 
+##for jobid,grams in positives_stage3_shortes_after_verb_removal: #loop com função pesada. gerando overhrad
+##    if should_split_compound(grams,model=model_embeddings,threshold=0.75) == True:
+##
+##        if jobid not in checkgramstobesplit:
+##            checkgramstobesplit[jobid] = []
+##        
+##        checkgramstobesplit[jobid].append(grams)
+##
+df11 = pd.DataFrame(grams_to_split,columns= ["gram","cosine_similarity"])
+df11.to_excel("grams_to_split.xlsx", index = False)
 
+print ("check concluded")
 
 all_grams = []
 
