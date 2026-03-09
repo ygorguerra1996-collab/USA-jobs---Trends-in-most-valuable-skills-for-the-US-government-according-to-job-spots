@@ -1,3 +1,18 @@
+
+## O que consideraremos como tech skill - foco do projeto:
+
+##Linguagem
+##Framework
+##Ferramenta
+##Tecnologia
+##Protocolo
+##Plataforma
+##Infra / DevOps / Cloud
+##Cyber
+
+## só skills que tem curso sobre, ou que alguem falaria numa entrevista tecnica. nada de
+## termos genericos como "administration" ou "data visualization tool", é coisa especifica.
+
 import requests #API
 import sqlite3 #db
 import time 
@@ -24,7 +39,215 @@ from sentence_transformers import SentenceTransformer ##gonna be used for creati
 from sklearn.cluster import KMeans ## gonna be used for clustering
 import os
 
+WHITELIST_COMPOUND_TECH_SKILLS = { ## skills that were marked to be split but shouldn't be,
+    #with the threshold for the c.similarity at 0,87. This list is to prevent spliting coumpound tech skills
+    # this list was generated passing all skills that were marked to be split thanks to the cosine similarity vs threshold
+    # to chat gpt...
 
+
+    # AI / ML
+    "machine learning",
+    "artificial intelligence",
+    "generative model",
+    "ml model",
+    "ml algorithm",
+
+    # Security / Cyber
+    "incident response",
+    "threat intelligence",
+    "intrusion detection",
+    "intrusion detection prevention",
+    "cybersecurity architecture",
+    "cyber threat",
+    "cyber incident",
+    "cyber counter threat",
+
+    # Networking / Protocols
+    "internet protocol",
+    "transport layer",
+    "voice internet protocol",
+    "lan wan",
+    "lan wan internetwork",
+    "tcp udp",
+
+    # Cloud / Infra
+    "cloud native",
+    "hybrid cloud",
+    "virtual machine",
+    "virtual machines",
+    "hyper v",
+    "containerization",
+    "cloud premise computing",
+
+    # Cryptography
+    "secure hash",
+    "hash algorithm",
+    "message digest",
+    "message digest algorithm",
+    "md5",
+    "sha",
+    "sha triple",
+
+    # Systems / OS
+    "windows server",
+    "windows servers",
+    "linux unix",
+
+    # Data / Analytics
+    "digital forensic",
+    "forensic science",
+
+    # Networking Hardware / Vendors
+    "clearpass cisco",
+    "cisco ios",
+    "aruba switch",
+    "router firewall",
+    "lan switch",
+    "san nas storage",
+
+    # Dev / Architecture
+    "cloud native modernization",
+    "architecture topology protocol",
+    "architecture installation integration",
+    "architecture cloud",
+
+    # General/ Validation with gpt on Cosine similarity between 0,80 and 0,87
+    'agile framework',
+    'cyber warfare',
+    'generative model',
+    'tape backup',
+    'switch aruba',
+    'cisco voip',
+    'microsoft ms windows',
+    'threat hunting',
+    'radios sdr',
+    'sprint planning',
+    'performance tuning',
+    'storage virtualization',
+    'microsoft entra',
+    'ms office',
+    'geospatial modeling',
+    'signal detection',
+    'cns atm',
+    'digital forensic',
+    'predictive analysis',
+    'switch cisco',
+    'microsoft m365',
+    'vulnerability scanning',
+    'paas service',
+    'hash algorithm sha',
+    's3 knowledge',
+    'algorithm sha',
+    'model ml',
+    'intune experience',
+    'windows unix',
+    'san nas storage',
+    'microsoft azure',
+    'iaas paas service',
+    'firefox edge',
+    'hub switch',
+    'nessus technical',
+    'framework rmf',
+    'devsecops software',
+    'md5 secure',
+    'python powershell',
+    'iam platform',
+    'simulation modeling',
+    'automation system',
+    'automate infrastructure',
+    'threat vulnerability risk',
+    'internet protocol',
+    'server desktop',
+    'cloud native',
+    'multiplexer concentrator',
+    'integration voip',
+    'framework dcwf',
+    'vulnerability scan',
+    'intelligence cyber',
+    'accreditation network',
+    'continuity operation',
+    'vulnerability risk security',
+    'availability authentication',
+    'switch router',
+    'intelligence ai ai',
+    'lan level',
+    'secure service',
+    'forensic computer examiner',
+    'cyber investigations',
+    'protocol buffers',
+    'generic routing encapsulation',
+    'windows server',
+    'windows servers',
+    'malware forensic',
+    'incident response',
+    'threat hunting',
+    'clearpass cisco',
+    'windows server',
+    'hyper-v',
+    'hybrid cloud',
+    'risk management framework (rmf)',
+    'threat intelligence',
+    'incident handling',
+    'model-based systems engineering (mbse)',
+    'sharepoint',
+    'security+',
+    'vulnerability assessment',
+    'generative ai',
+    'iacis certified forensic specialist',
+    'verification and validation',
+    'computer forensics',
+    'devsecops',
+    'kace systems management',
+    'confidentiality integrity availability',
+    'serverless applications',
+    'cybersecurity architecture',
+    'cyber warfare',
+    'security content automation protocol',
+    'web services',
+    'secure software development',
+    'data visualization software',
+    'object-oriented programming',
+    'voip',
+    'data ingestion and transformation',
+    'md5 hashing algorithm',
+    'containerization microservices',
+    'time series statistics',
+    'it asset management'
+}
+whitelist_set = set(WHITELIST_COMPOUND_TECH_SKILLS)
+
+BLACK_LIST_OF_GRAMS_ABOVE_COSINE_SIMILARITY_THAT_NEED_TO_BE_SPLIT = {
+'sas spss',
+'spss stata',
+'voip vosip',
+'splunk nessus',
+'sas spss stata',
+'tcp udp',
+'tableau qlik',
+'library itil',
+'acas associate',
+'jifm jfinsys jics',
+'suite nessus',
+'websense splunk',
+'cisco av',
+'qlik powerbi',
+'aws ebs',
+'pub sub',
+'udp dds',
+'av ip',
+'o365 adobe',
+'vulnerability encryption',
+'clep ccaf dante',
+'science physic',
+'sysadmin infosec',
+'probability statistic',
+'static dynamic',
+'language python',
+'prof cert sec+',
+'tcp ip'
+}
+
+blacklist_set = set(BLACK_LIST_OF_GRAMS_ABOVE_COSINE_SIMILARITY_THAT_NEED_TO_BE_SPLIT)
 #os 3 estagios estão muito bons, apesar de ter lixo ainda, mas tamos indo muito bem, até validei uma amostragem de 1k com o gpt
 # conseguimos separar o lixo de "somos uma empresa assim assim..." e ficar com o que importa. Até o lixo aqui é proximo das skills.
 
@@ -69,33 +292,6 @@ generic_non_tech_substantives_to_cut = ["activity", "activities", "mission", "mi
 
 to_cut_prefixes = tuple(experience_qualifiers_to_cut + generic_non_tech_substantives_to_cut) # "startswith" doesnt accept lists, that why I'm converting them to tuples
 
-# testei o positive stage3_shorter e ele tem 1-3 grams. tudo certo
-
-#PROXIMOS PASSOS:
-
-##📌 Etapas seguintes (bem simples):
-
-##1) Gerar embeddings dos positivos
-##
-##Transformar cada token (unigram/bigram/trigram) em um vetor “que entende o significado”.
-##→ Isso permite separar skills reais de palavras genéricas.
-##
-##Exemplo:
-##
-##“python”, “sql”, “docker” → ficam próximos.
-##
-##“create”, “maintain”, “learning” → ficam longe.
-## O embedding gera um vetor que tem DIVERSAS dimensões. É como se ele tivesse colcoando cada palavra nesse espaço multidimensional de
-##768 dimensões. Palavras semelhantes terão esses vetores próximos. enquanto muito diferentes, distantes. Assim ele mede a proximidade
-## de significado.
-## cada dimensão é como uma coordenada abstrata, que ele usa para "entender o significado" da palavra.
-## O modelo já é treinado com milhões de frases da internet, livros etc. Ele sabe identificar inclusive palavras que tem mais de um 
-## significado tipo "manga". Ele olha o contexto na frase. Ou seja é só aplicar o modelo na palavra ou frase para gerar os embeddings.
-## pelo visto aqui vai ser o "sentence-transformers"
-## Ou seja os embeddings também são vetores, mas é diferente do tf-idf. Enquanto o tfidf é calculado para medir o peso das palavras,
-## com base em ocorrencia no documento*ocorrencia em todos os documentos. Em que um é o oposto do outro nessa equação; Os vetores do
-## embeddings são calculados de acordo com o que o modelo já foi pré-treinado. Não existe “ocorrência no documento” nessa parte; o 
-# modelo já sabe, pela sua experiência prévia, que “Python” e “SQL” são conceitos relacionados, mesmo que apareçam poucas vezes no seu dataset.
 
 model_embeddings = SentenceTransformer('all-MiniLM-L6-v2') ## é o modelo 'all-MiniLM-L6-v2' que é leve, rápido e bom para tarefas de similaridade semântica
 #ele que gera os embeddings de palavras. all-MiniLM é o modelo, "L6" significa que ele tem 6 camadas de atenção. E v2 é a versão dele.
@@ -129,21 +325,12 @@ for i in range (0,len(positives_stage3_shorter_after_listtreatment),batch_size):
         positives_stage3_shortes_after_verb_removal.append((jobid,grams))
 
 
-#add Multi-skill decomposition here then change var name below
-# we're gonna attack first cases of "familiarity with python", "python experience", "python" etc.
-
-## pelo que estava estudando, vamos usar embeddings em cada palavra dos grams que forem 2-3.
-## caso o embedding deles seja similar, não separa, são correlacionados, tipo "machine learning"
-
-## caso a similaridade for baixa, separa. que um não tem a ver com o outro. o GPT deu a ideia
-## de usar um threshold de 0.75 para definir similaridade ou não. Amanhã vou retomar, mas vamos 
-## partir desse código:
 
 from sklearn.metrics.pairwise import cosine_similarity #imports the function that calculates cosine_simlarity
 #it calculates how similar two vectors are in direction, not magnitude. result -1 for oposites, and 1 for identical
 import numpy as np #numpy for numeric operations, very eficient
 
-def should_split_compound(gram, gram_embeddings, threshold=0.87): #function that says if the gram should be splitted or not
+def should_split_compound(gram, gram_embeddings, threshold=0.8836): #function that says if the gram should be splitted or not
 #gram is the string that I'll pass, model is the embeddings model (sentence-transformer)
 # threshold = similarity limit that, if below this number, will tell that the grams don't make a whole concept
     tokens = gram.split() #treats and converts the gram in list
@@ -155,13 +342,9 @@ def should_split_compound(gram, gram_embeddings, threshold=0.87): #function that
 
     emb_full = gram_embeddings[gram].reshape(1,-1) #as we already calculated the embeddings for all grams
     #we're unpacking the embedding for the specific gram.
+    
+    emb_parts = model_embeddings.encode(tokens, convert_to_numpy=True)
 
-    try:
-        emb_parts = np.vstack([gram_embeddings[t] for t in tokens])
-
-    except KeyError:
-        # token não existe no embedding (raro, mas seguro)
-        return False,None
     
     emb_mean = emb_parts.mean(axis=0, keepdims=True)
     #here, we are calculating a mean of the embeding parts, and the "axis=0" plays a key role:
@@ -199,39 +382,88 @@ def should_split_compound(gram, gram_embeddings, threshold=0.87): #function that
 
     return sim < threshold, sim #returns TRUE for spliting/ FALSE for nothing
 
+    #keep the cosine at 0,88 and place the ones that are above it that should be split in a
+    #black list
+    #additionaly, check for all the splited with chat gpt to see the whitelist. -> first
 
-unique_grams = list (set(grams for _,grams in positives_stage3_shortes_after_verb_removal))
-gram_embeddings = dict(zip(unique_grams,model_embeddings.encode(unique_grams,batch_size=512, convert_to_numpy=True)))
+    ##parei tentando fazer o gpt entender o que eu quero dele sobre as skills compostas... ele não tava
+    ## entendendo, provavelmente por conta do tamanho das listas
+
+
+
+
+unique_grams = list (set(grams for _,grams in positives_stage3_shortes_after_verb_removal)) #only grams,drops jobids
+gram_embeddings = dict(zip(unique_grams,model_embeddings.encode(unique_grams,batch_size=512, convert_to_numpy=True))) #pegando só as grams e passando embedings
 ## A way that I found to pass all the grams through the sentence transformers once, instead of putting
 ## in a loop and decreasing performance
+#so far we got gram + embedings in a dict
 
 grams_to_split = []
+map_grams_cosines = []
 
-for gram,vector in gram_embeddings.items():
-    should_split,sim = should_split_compound(gram,gram_embeddings,threshold=0.87)
+### isso aqui embaixo até então só ta gerando arquivos para auditar. ok to separando também o obj que vai cruzar com o positives_stage3_shortes_after_verb_removal
+## para criar o novo que vai conter já tudo separadinho.
+for gram,vector in gram_embeddings.items(): #iterating through gram+emb
+    should_split,sim = should_split_compound(gram,gram_embeddings,threshold=0.8836)
 
-    if should_split == True:
+    if gram in blacklist_set: 
+        grams_to_split.append((gram,sim))
 
-        grams_to_split.append((gram, sim))
+    elif should_split == True and gram not in whitelist_set:
+
+        grams_to_split.append((gram, sim)) #placing the ones that are marked to be split in an object
+
+    else: continue
+
+    map_grams_cosines.append((gram,sim)) #only a map to check the cosines
 
 
-##for jobid,grams in positives_stage3_shortes_after_verb_removal: #loop com função pesada. gerando overhrad
-##    if should_split_compound(grams,model=model_embeddings,threshold=0.75) == True:
-##
-##        if jobid not in checkgramstobesplit:
-##            checkgramstobesplit[jobid] = []
-##        
-##        checkgramstobesplit[jobid].append(grams)
-##
 df11 = pd.DataFrame(grams_to_split,columns= ["gram","cosine_similarity"])
 df11.to_excel("grams_to_split.xlsx", index = False)
 
 print ("check concluded")
 
+df12 = pd.DataFrame(map_grams_cosines,columns= ["all_grams","cosine_similarity"])
+df12.to_excel("allgrams_with_sims_to_check_cosines.xlsx",index = False) #to check why 
+#some grams that were supposed to be separated, weren't.
+print ("allgramscosinecheck made")
+
+### FIM  da parte que ta gerando arquivos para auditar.
+
+## OBS PARA AMANHA. COM THRESHOLD EM 0,87 AINDA TA FALTANDO QUEBRAR ALGUNS, APESAR DE TER QUEBRADO BASTANTE
+## NÃO CHEQUEI O 0.87 SE CORTOU GRAMS QUE NÃO ERA PRA CORTAR. MAS VEMOS ISSO AMANHA, VOU TER QUE AUMENTAR UM POUCO
+## DECIDED TO KEEP THE THRESHOLD AT 0.8836, with is kind of a high one. But to prevent separating skills that are compound, ("i.e. machine learning")
+## I sent to gpt for validating the the ones that had from 0.8836 to 0.80 of cosine similarity. Having in mind that under 0.8 is almost
+## certain that no coumpound skill is gonna be there.
+
+## Good, compound skills between cosine similarity of 0,80 to 0,87 are in the whitelist now. I need to put the ones that are
+## not compound skills that have C.S. higher than 0,87. in a black list and build logic to put them in the separation. NEXT STEP just increment in logic
+
+#preciso pensar também no caso das trigrams... será que em todos os casos compensa quebrar em 3 palavras, ou tem alguns que vale manter 2 das tres juntas?
+#aí encaixar a separação dos grams com o restante do código,
+
+# depois decidir os casos de power bi, software power bi, powerbi (talvez esteja resolvido com o startswith que colocamos)
+
+
 all_grams = []
 
+###  positives_stage3_shortes_after_verb_removal para cruzar. e cruzar com o objeto que vai armazenar os que
+# tem que splitar. é mais performatico.
+
+positives_stage3_shorter_after_split_tied_skills = []
+##putz, vai ter o problema com as 3 grams, pode ter casos que 2 são a mesma e tem uma colada. tenho que ver isso por fim.
+set_grams_to_split = {gram for gram,sim in grams_to_split} #this is a set. its being created by a set comprehension
+
 for jobid,grams in positives_stage3_shortes_after_verb_removal:
-    all_grams.append(grams)
+    if grams in set_grams_to_split:
+        splited = grams.split()
+        for words in splited:
+            positives_stage3_shorter_after_split_tied_skills.append((jobid,words))
+    else: positives_stage3_shorter_after_split_tied_skills.append((jobid,grams))
+
+
+for jobid,grams in positives_stage3_shorter_after_split_tied_skills:
+    all_grams.append(grams) # só as grams sem jobid
 
 ##all_grams é uma lista de listas, em que cada lista é uma gram
 
@@ -246,13 +478,13 @@ unique_grams = sorted(set(grams_as_strings)) #removing duplicates so clusterizat
 
 sample_size = 150000
 
-first150k_unique_grams = unique_grams[:sample_size]
-first150k_embeddings = model_embeddings.encode(first150k_unique_grams,batch_size=512, convert_to_numpy=True)
+first150k_unique_grams = unique_grams[:sample_size] #catching 150k of the unique grams (after deduplication) list
+first150k_embeddings = model_embeddings.encode(first150k_unique_grams,batch_size=512, convert_to_numpy=True) #adding embeddings to these 150k
 
 k =8
 
-kmeans = KMeans(n_clusters=k,random_state=42,n_init='auto')
-kmeans.fit(first150k_embeddings)
+kmeans = KMeans(n_clusters=k,random_state=42,n_init='auto') 
+kmeans.fit(first150k_embeddings) #passing these 150k to the kmeans for clusterization
 
 cluster_dict = {}
 
